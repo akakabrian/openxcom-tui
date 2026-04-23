@@ -52,6 +52,7 @@ class HelpScreen(_BaseModal):
         t.append("  b         base layout\n")
         t.append("  i         intercept UFO\n")
         t.append("  u         UFOpaedia\n")
+        t.append("  g         graphs (funding, score)\n")
         t.append("  h         recenter on base\n")
         t.append("  t         force-start a battle (debug)\n")
         t.append("  q         quit\n\n")
@@ -414,6 +415,54 @@ class InterceptScreen(_BaseModal):
             t.append(f"\n{len(crashed)} crash site(s) — press L to land\n",
                      style=Style(color="rgb(120,220,120)", bold=True))
         self.body.update(t)
+
+
+class GraphsScreen(_BaseModal):
+    """Month-end funding + score history as sparkline bars."""
+
+    def compose(self):
+        with Vertical(classes="dialog dialog-wide"):
+            self.body = Static("", classes="dialog-title")
+            yield self.body
+
+    def on_mount(self) -> None:
+        self._refresh_body()
+
+    def _refresh_body(self) -> None:
+        g: Game = self.app.game
+        t = Text()
+        t.append("— HISTORY —\n\n", style=Style(color="rgb(240,220,140)", bold=True))
+        t.append("Funding:\n", style="bold")
+        t.append(_sparkline(g.history_funds) + "\n",
+                 style=Style(color="rgb(120,220,120)"))
+        if g.history_funds:
+            t.append(f"  latest ${g.history_funds[-1]:,}   "
+                     f"min ${min(g.history_funds):,}   "
+                     f"max ${max(g.history_funds):,}\n", style="dim")
+        t.append("\nScore:\n", style="bold")
+        t.append(_sparkline(g.history_score) + "\n",
+                 style=Style(color="rgb(240,200,120)"))
+        if g.history_score:
+            t.append(f"  latest {g.history_score[-1]}   "
+                     f"min {min(g.history_score)}   "
+                     f"max {max(g.history_score)}\n", style="dim")
+        else:
+            t.append("  (no data yet — survive a month to see trends)\n",
+                     style="dim")
+        self.body.update(t)
+
+
+_SPARK_CHARS = " ▁▂▃▄▅▆▇█"
+
+
+def _sparkline(values: list[int]) -> str:
+    if not values:
+        return "(no data)"
+    vmin = min(values)
+    vmax = max(values)
+    rng = max(1, vmax - vmin)
+    return "".join(_SPARK_CHARS[min(8, int((v - vmin) * 8 / rng))]
+                   for v in values[-80:])
 
 
 class UfopaediaScreen(_BaseModal):

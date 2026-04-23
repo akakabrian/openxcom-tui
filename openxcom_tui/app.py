@@ -45,6 +45,10 @@ class GeoscapeMapView(Static):
         self.game = game
         self.cursor_x = geo.LAND_W // 2
         self.cursor_y = geo.LAND_H // 2
+        # 2 Hz animation frame counter — used to swap water/ufo glyphs.
+        self._anim_frame = 0
+        # Precomputed cell kind cache — globe topology doesn't change.
+        self._kind_cache: list[list[str]] | None = None
 
     def _cell_kind(self, x: int, y: int) -> str:
         ch = geo.land_at(x, y)
@@ -57,13 +61,27 @@ class GeoscapeMapView(Static):
                     return "coast"
         return "ocean"
 
+    def _build_kind_cache(self) -> list[list[str]]:
+        """Precompute land/coast/ocean classification for every cell —
+        land topology is static so we can cache it forever."""
+        cache: list[list[str]] = []
+        for y in range(geo.LAND_H):
+            row: list[str] = []
+            for x in range(geo.LAND_W):
+                row.append(self._cell_kind(x, y))
+            cache.append(row)
+        return cache
+
     def refresh_view(self) -> None:
-        # Build the rich Text for the whole globe. At 120×36 this runs in
-        # well under 20 ms, so we repaint on every tick timer.
+        # Build the rich Text for the whole globe. At 120×36 this runs
+        # comfortably under the 1 Hz refresh interval.
         text = Text()
+        if self._kind_cache is None:
+            self._kind_cache = self._build_kind_cache()
+        kinds = self._kind_cache
         # Precompute marker overrides: base, UFOs, craft, cursor.
         overrides: dict[tuple[int, int], tuple[str, Style]] = {}
-        # Radar coverage: darken ocean inside range.
+        # Radar coverage.
         radar_cells: set[tuple[int, int]] = set()
         for b in self.game.bases:
             rng = b.radar_range_km()
@@ -78,6 +96,8 @@ class GeoscapeMapView(Static):
             cx, cy = geo.latlon_to_xy(lat, lon)
             overrides.setdefault((cx, cy), ("⌂", tiles.STYLE_CITY))
         # UFOs — only render if detected (gives radar coverage meaning).
+        # Animate via 2 Hz glyph swap so the eye is drawn to the blip.
+        blink = self._anim_frame & 1
         for u in self.game.ufos.values():
             if u.shot_down:
                 continue
@@ -85,7 +105,8 @@ class GeoscapeMapView(Static):
                 continue
             ux, uy = geo.latlon_to_xy(u.lat, u.lon)
             ut = content.UFO_TYPES[u.type_id]
-            overrides[(ux, uy)] = (ut.glyph, tiles.STYLE_UFO)
+            glyph = ut.glyph if blink else "*"
+            overrides[(ux, uy)] = (glyph, tiles.STYLE_UFO)
         # Craft in flight.
         for c in self.game.crafts.values():
             if c.lat is None or c.lon is None:
@@ -93,23 +114,29 @@ class GeoscapeMapView(Static):
             cx, cy = geo.latlon_to_xy(c.lat, c.lon)
             overrides[(cx, cy)] = ("✈", tiles.STYLE_CRAFT)
 
+        cursor = (self.cursor_x, self.cursor_y)
         for y in range(geo.LAND_H):
+            row_kinds = kinds[y]
             for x in range(geo.LAND_W):
                 if (x, y) in overrides:
-                    g, st = overrides[(x, y)]
-                    if (x, y) == (self.cursor_x, self.cursor_y):
+                    gch, st = overrides[(x, y)]
+                    if (x, y) == cursor:
                         st = tiles.STYLE_CURSOR
-                    text.append(g, style=st)
+                    text.append(gch, style=st)
                     continue
-                kind = self._cell_kind(x, y)
+                kind = row_kinds[x]
                 st = tiles.geo_cell_style(kind)
                 if (x, y) in radar_cells and kind == "ocean":
                     st = tiles.STYLE_RADAR
-                g = tiles.geo_cell_glyph(kind, x, y)
-                if (x, y) == (self.cursor_x, self.cursor_y):
+                gch = tiles.geo_cell_glyph(kind, x, y)
+                # Animate ocean with 2-glyph swap every other frame.
+                if kind == "ocean" and blink:
+                    gch = "~" if gch == "≈" else "≈"
+                if (x, y) == cursor:
                     st = tiles.STYLE_CURSOR
-                text.append(g, style=st)
+                text.append(gch, style=st)
             text.append("\n")
+        self._last_text = text
         self.update(text)
 
     # --- input
@@ -193,6 +220,7 @@ class GeoscapeScreen(Screen):
         Binding("b",     "open_base", "Base"),
         Binding("i",     "open_intercept", "Intercept"),
         Binding("u",     "open_ufopaedia", "UFOpaedia"),
+        Binding("g",     "open_graphs", "Graphs"),
         Binding("h",     "recenter", "Home"),
         Binding("question_mark", "open_help", "Help"),
         Binding(">",     "advance_day", "Day+"),
@@ -304,6 +332,10 @@ class GeoscapeScreen(Screen):
     def action_open_ufopaedia(self) -> None:
         from .screens import UfopaediaScreen
         self.app.push_screen(UfopaediaScreen())
+
+    def action_open_graphs(self) -> None:
+        from .screens import GraphsScreen
+        self.app.push_screen(GraphsScreen())
 
     def action_open_help(self) -> None:
         from .screens import HelpScreen
@@ -610,6 +642,9 @@ class OpenXcomApp(App):
         # Only the top-of-stack screen needs refreshing; deeper screens
         # aren't visible.
         if isinstance(scn, GeoscapeScreen):
+            # Bump animation frame (2 Hz blink).
+            if scn.map_view is not None:
+                scn.map_view._anim_frame ^= 1
             scn.refresh_all()
         elif isinstance(scn, BattlescapeScreen):
             scn.refresh_all()

@@ -141,6 +141,23 @@ async def s_intercept_opens(app, pilot):
     await _modal(pilot, app, "i", "InterceptScreen")
 
 
+async def s_graphs_opens(app, pilot):
+    await _modal(pilot, app, "g", "GraphsScreen")
+
+
+async def s_animation_blinks_ocean(app, pilot):
+    """Bumping the animation frame must swap some ocean glyphs."""
+    mv = app.screen.map_view
+    mv._anim_frame = 0
+    mv.refresh_view()
+    snap0 = str(mv._last_text)
+    mv._anim_frame = 1
+    mv.refresh_view()
+    snap1 = str(mv._last_text)
+    # The two renderings must differ somewhere (ocean glyphs swap).
+    assert snap0 != snap1, "animation frame had no visible effect"
+
+
 # --------------------------- workflow scenarios ---------------------------
 
 async def s_research_start_via_modal(app, pilot):
@@ -305,6 +322,8 @@ SCENARIOS: list[Scenario] = [
     Scenario("base_opens_and_closes", s_base_opens),
     Scenario("ufopaedia_opens_and_closes", s_ufopaedia_opens),
     Scenario("intercept_opens_and_closes", s_intercept_opens),
+    Scenario("graphs_opens_and_closes", s_graphs_opens),
+    Scenario("animation_blinks_ocean", s_animation_blinks_ocean),
     Scenario("research_start_via_modal", s_research_start_via_modal),
     Scenario("research_completes_over_time", s_research_completes_over_time),
     Scenario("battle_enters_on_t", s_battle_enters_on_t),
