@@ -17,12 +17,10 @@ if we exceed 30 ms per frame.
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
+from typing import Optional, cast
 
-from rich.segment import Segment
 from rich.style import Style
 from rich.text import Text
-from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -30,7 +28,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Header, RichLog, Static
 
 from . import content, tiles
-from .engine import GEO_H, GEO_W, Game, Mode, new_game
+from .engine import Game, new_game
 from .battlescape import BATTLE_H, BATTLE_W, Battle
 from . import geoscape as geo
 
@@ -237,11 +235,15 @@ class GeoscapeScreen(Screen):
         self.message_log: Optional[RichLog] = None
         self._flash_timer = None
 
+    @property
+    def oxc_app(self) -> "OpenXcomApp":
+        return cast("OpenXcomApp", self.app)
+
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal(id="main"):
             with Vertical(id="left-col"):
-                self.map_view = GeoscapeMapView(self.app.game, id="map")
+                self.map_view = GeoscapeMapView(self.oxc_app.game, id="map")
                 yield self.map_view
                 self.flash_bar = Static("", id="flash-bar")
                 yield self.flash_bar
@@ -249,7 +251,7 @@ class GeoscapeScreen(Screen):
                                             highlight=False, markup=True)
                 yield self.message_log
             with Vertical(id="right-col"):
-                self.status_panel = SidePanel(self.app.game, id="status-panel")
+                self.status_panel = SidePanel(self.oxc_app.game, id="status-panel")
                 yield self.status_panel
         yield Footer()
 
@@ -263,7 +265,7 @@ class GeoscapeScreen(Screen):
         """Copy pending engine log messages into the widget."""
         if self.message_log is None:
             return
-        game: Game = self.app.game
+        game: Game = self.oxc_app.game
         # Only write new entries since last call — track length.
         already = getattr(self, "_log_consumed", 0)
         for msg in game.log[already:]:
@@ -289,29 +291,29 @@ class GeoscapeScreen(Screen):
             self.map_view.move_cursor(dx, dy)
 
     def action_recenter(self) -> None:
-        if self.map_view is None or not self.app.game.bases:
+        if self.map_view is None or not self.oxc_app.game.bases:
             return
-        b = self.app.game.bases[0]
+        b = self.oxc_app.game.bases[0]
         self.map_view.cursor_x, self.map_view.cursor_y = geo.latlon_to_xy(b.lat, b.lon)
         self.map_view.refresh_view()
 
     def action_toggle_pause(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         g.paused = not g.paused
         self.flash("PAUSED" if g.paused else "running")
 
     def action_advance_day(self) -> None:
-        self.app.game.advance_hours(24)
+        self.oxc_app.game.advance_hours(24)
         self.refresh_all()
 
     def action_advance_hour(self) -> None:
-        self.app.game.advance_hours(1)
+        self.oxc_app.game.advance_hours(1)
         self.refresh_all()
 
     def action_start_battle(self) -> None:
         """Debug / player-initiated: drop into a battle with no UFO context."""
-        self.app.game.start_battle()
-        self.app.switch_to_battle()
+        self.oxc_app.game.start_battle()
+        self.oxc_app.switch_to_battle()
 
     def action_open_research(self) -> None:
         from .screens import ResearchScreen
@@ -363,7 +365,7 @@ class BattleMapView(Static):
         self.cursor_y = BATTLE_H // 2
 
     def refresh_view(self) -> None:
-        battle: Optional[Battle] = self.game.battle  # type: ignore[assignment]
+        battle: Optional[Battle] = self.game.battle
         if battle is None:
             self.update("(no battle)")
             return
@@ -410,7 +412,7 @@ class BattleSidePanel(Static):
         self.game = game
 
     def refresh_panel(self) -> None:
-        battle: Optional[Battle] = self.game.battle  # type: ignore[assignment]
+        battle: Optional[Battle] = self.game.battle
         if battle is None:
             self.update("")
             return
@@ -469,23 +471,27 @@ class BattlescapeScreen(Screen):
         self.status_panel: Optional[BattleSidePanel] = None
         self.message_log: Optional[RichLog] = None
 
+    @property
+    def oxc_app(self) -> "OpenXcomApp":
+        return cast("OpenXcomApp", self.app)
+
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal(id="main"):
             with Vertical(id="left-col"):
-                self.map_view = BattleMapView(self.app.game, id="map")
+                self.map_view = BattleMapView(self.oxc_app.game, id="map")
                 yield self.map_view
                 self.message_log = RichLog(id="log-panel", max_lines=200,
                                             highlight=False, markup=True)
                 yield self.message_log
             with Vertical(id="right-col"):
-                self.status_panel = BattleSidePanel(self.app.game, id="status-panel")
+                self.status_panel = BattleSidePanel(self.oxc_app.game, id="status-panel")
                 yield self.status_panel
         yield Footer()
 
     def on_mount(self) -> None:
         # Center cursor on selected unit.
-        battle = self.app.game.battle
+        battle = self.oxc_app.game.battle
         if battle is not None:
             sel = battle.selected()
             if sel and self.map_view:
@@ -500,7 +506,7 @@ class BattlescapeScreen(Screen):
             self.map_view.move_cursor(dx, dy)
 
     def action_next_unit(self) -> None:
-        battle = self.app.game.battle
+        battle = self.oxc_app.game.battle
         if battle is None:
             return
         battle.cycle_selection(1)
@@ -511,7 +517,7 @@ class BattlescapeScreen(Screen):
         self.refresh_all()
 
     def action_step(self, dx: int, dy: int) -> None:
-        battle = self.app.game.battle
+        battle = self.oxc_app.game.battle
         if battle is None:
             return
         r = battle.move_selected(dx, dy)
@@ -525,7 +531,7 @@ class BattlescapeScreen(Screen):
         self._check_outcome()
 
     def action_shoot(self, mode: str = "snap") -> None:
-        battle = self.app.game.battle
+        battle = self.oxc_app.game.battle
         if battle is None or self.map_view is None:
             return
         tx, ty = self.map_view.cursor_x, self.map_view.cursor_y
@@ -536,7 +542,7 @@ class BattlescapeScreen(Screen):
         self._check_outcome()
 
     def action_end_turn(self) -> None:
-        battle = self.app.game.battle
+        battle = self.oxc_app.game.battle
         if battle is None:
             return
         events = battle.end_player_turn()
@@ -548,8 +554,8 @@ class BattlescapeScreen(Screen):
         self._check_outcome()
 
     def action_abort(self) -> None:
-        self.app.game.end_battle(victory=False)
-        self.app.switch_to_geoscape()
+        self.oxc_app.game.end_battle(victory=False)
+        self.oxc_app.switch_to_geoscape()
 
     def action_open_help(self) -> None:
         from .screens import HelpScreen
@@ -564,7 +570,7 @@ class BattlescapeScreen(Screen):
             self.status_panel.refresh_panel()
 
     def _check_outcome(self) -> None:
-        battle = self.app.game.battle
+        battle = self.oxc_app.game.battle
         if battle is None:
             return
         out = battle.outcome()
@@ -576,8 +582,8 @@ class BattlescapeScreen(Screen):
         for a in battle.alien_units():
             if a.hp <= a.max_hp * 0.15:
                 battle.captives[a.rank_id] = battle.captives.get(a.rank_id, 0) + 1
-        self.app.game.end_battle(victory=victory)
-        self.app.switch_to_geoscape()
+        self.oxc_app.game.end_battle(victory=victory)
+        self.oxc_app.switch_to_geoscape()
 
 
 # ---- top-level app -------------------------------------------------------

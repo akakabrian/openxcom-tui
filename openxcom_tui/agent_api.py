@@ -20,13 +20,11 @@ Routes:
 from __future__ import annotations
 
 import asyncio
-import json
-from typing import Optional
 
 from aiohttp import web
 
 from . import content
-from .engine import Game, Mode
+from .engine import Game
 
 
 def _json(data, status: int = 200) -> web.Response:

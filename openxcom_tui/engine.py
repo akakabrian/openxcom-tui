@@ -27,12 +27,16 @@ Battlescape:
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from . import content
+
+if TYPE_CHECKING:
+    from .battlescape import Battle
 
 
 # ---- geoscape tick constants ---------------------------------------------
@@ -208,7 +212,7 @@ class Game:
 
     # Battlescape — None unless a mission is active. Forward-declared; real
     # class is in battlescape.py (imported lazily to avoid circular dep).
-    battle: Optional[object] = None
+    battle: Optional["Battle"] = None
 
     # Counters for ID allocation.
     _next_soldier_id: int = 1
@@ -356,9 +360,9 @@ class Game:
 
     # --- battle -----------------------------------------------------------
 
-    def start_battle(self, ufo_id: int | None = None) -> object:
+    def start_battle(self, ufo_id: int | None = None) -> "Battle":
         """Spin up a battlescape. Lazy-imports to avoid circular deps."""
-        from .battlescape import Battle, new_battle
+        from .battlescape import new_battle
         base_idx = 0
         soldier_ids = list(self.bases[base_idx].soldier_ids) if self.bases else []
         # Take up to 8 soldiers on the mission, faithful to Skyranger.
@@ -376,8 +380,7 @@ class Game:
     def end_battle(self, victory: bool) -> list[str]:
         """Resolve a battle back into the geoscape."""
         events: list[str] = []
-        from .battlescape import Battle
-        b: Battle = self.battle  # type: ignore[assignment]
+        b = self.battle
         if b is None:
             return events
         # Update soldier stats and casualties.
@@ -471,7 +474,7 @@ class Game:
                  "missions": s.missions, "alive": s.alive}
                 for s in self.soldiers.values()
             ],
-            "battle": None if self.battle is None else self.battle.snapshot(),  # type: ignore[union-attr]
+            "battle": None if self.battle is None else self.battle.snapshot(),
         }
 
 
@@ -557,7 +560,6 @@ def _tick_ufos(g: Game) -> list[str]:
         if u.shot_down:
             continue
         # Simple heading integration; 1 hour of flight.
-        import math
         # km per hour → degrees; crude Earth (1 deg lat ≈ 111 km).
         dlat = math.sin(u.heading) * u.speed_kph / 111.0
         dlon = math.cos(u.heading) * u.speed_kph / 111.0 / max(0.3, math.cos(math.radians(u.lat)))
@@ -571,8 +573,7 @@ def _tick_ufos(g: Game) -> list[str]:
                 if rng_km <= 0:
                     continue
                 # Great-circle approx via equirectangular.
-                import math as m2
-                dx = (u.lon - b.lon) * 111 * m2.cos(m2.radians(b.lat))
+                dx = (u.lon - b.lon) * 111 * math.cos(math.radians(b.lat))
                 dy = (u.lat - b.lat) * 111
                 d = (dx * dx + dy * dy) ** 0.5
                 if d <= rng_km:

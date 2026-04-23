@@ -17,10 +17,8 @@ multi-level Z). Intentional — MVP.
 
 from __future__ import annotations
 
-import math
 import random
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Iterable, Optional
 
 from . import content
@@ -39,11 +37,6 @@ TERRAIN_CLASSES = {
 }
 BLOCKED_MOVE = {"wall", "tree", "water", "door_closed"}
 BLOCKED_SIGHT = {"wall", "tree"}
-
-
-class TurnSide(Enum):
-    PLAYER = "player"
-    ALIEN = "alien"
 
 
 @dataclass

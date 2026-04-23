@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import time
+from typing import cast
 
-from openxcom_tui.app import OpenXcomApp
+from openxcom_tui.app import BattlescapeScreen, GeoscapeScreen, OpenXcomApp
 from openxcom_tui.engine import new_game
 
 
@@ -63,7 +64,8 @@ async def bench_ui() -> None:
     app = OpenXcomApp(seed=7)
     async with app.run_test(size=(200, 60)) as pilot:
         await pilot.pause()
-        mv = app.screen.map_view
+        mv = cast(GeoscapeScreen, app.screen).map_view
+        assert mv is not None
         t0 = time.perf_counter()
         for _ in range(50):
             mv.refresh_view()
@@ -73,7 +75,8 @@ async def bench_ui() -> None:
         # Switch to battle
         await pilot.press("t")
         await pilot.pause()
-        bmv = app.screen.map_view
+        bmv = cast(BattlescapeScreen, app.screen).map_view
+        assert bmv is not None
         t0 = time.perf_counter()
         for _ in range(50):
             bmv.refresh_view()

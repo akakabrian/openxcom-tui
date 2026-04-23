@@ -15,11 +15,19 @@ import sys
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, cast
 
 from openxcom_tui.app import BattlescapeScreen, GeoscapeScreen, OpenXcomApp
-from openxcom_tui import content, geoscape as geo
+from openxcom_tui import geoscape as geo
 from openxcom_tui.engine import Mode
+
+
+def _geo(app: OpenXcomApp) -> GeoscapeScreen:
+    return cast(GeoscapeScreen, app.screen)
+
+
+def _bat(app: OpenXcomApp) -> BattlescapeScreen:
+    return cast(BattlescapeScreen, app.screen)
 
 OUT = Path(__file__).resolve().parent / "out"
 OUT.mkdir(exist_ok=True)
@@ -36,22 +44,25 @@ class Scenario:
 async def s_mount_clean(app: OpenXcomApp, pilot) -> None:
     """App boots, geoscape is on top, widgets exist."""
     assert isinstance(app.screen, GeoscapeScreen), type(app.screen).__name__
-    assert app.screen.map_view is not None
-    assert app.screen.status_panel is not None
-    assert app.screen.message_log is not None
+    scn = _geo(app)
+    assert scn.map_view is not None
+    assert scn.status_panel is not None
+    assert scn.message_log is not None
     assert app.game is not None
     assert len(app.game.bases) >= 1
     assert len(app.game.soldiers) >= 8
 
 
 async def s_cursor_starts_mid_globe(app: OpenXcomApp, pilot) -> None:
-    mv = app.screen.map_view
+    mv = _geo(app).map_view
+    assert mv is not None
     assert mv.cursor_x == geo.LAND_W // 2
     assert mv.cursor_y == geo.LAND_H // 2
 
 
 async def s_cursor_moves(app: OpenXcomApp, pilot) -> None:
-    mv = app.screen.map_view
+    mv = _geo(app).map_view
+    assert mv is not None
     sx, sy = mv.cursor_x, mv.cursor_y
     await pilot.press("right", "right", "right")
     await pilot.press("down", "down")
@@ -60,14 +71,16 @@ async def s_cursor_moves(app: OpenXcomApp, pilot) -> None:
 
 
 async def s_cursor_wraps_longitude(app: OpenXcomApp, pilot) -> None:
-    mv = app.screen.map_view
+    mv = _geo(app).map_view
+    assert mv is not None
     mv.cursor_x = 0
     await pilot.press("left")
     assert mv.cursor_x == geo.LAND_W - 1, mv.cursor_x
 
 
 async def s_cursor_clamps_latitude(app: OpenXcomApp, pilot) -> None:
-    mv = app.screen.map_view
+    mv = _geo(app).map_view
+    assert mv is not None
     for _ in range(geo.LAND_H + 5):
         await pilot.press("down")
     assert mv.cursor_y == geo.LAND_H - 1, mv.cursor_y
@@ -77,7 +90,8 @@ async def s_cursor_clamps_latitude(app: OpenXcomApp, pilot) -> None:
 
 
 async def s_recenter_on_base(app: OpenXcomApp, pilot) -> None:
-    mv = app.screen.map_view
+    mv = _geo(app).map_view
+    assert mv is not None
     mv.cursor_x = 1
     mv.cursor_y = 1
     await pilot.press("h")
@@ -147,7 +161,8 @@ async def s_graphs_opens(app, pilot):
 
 async def s_animation_blinks_ocean(app, pilot):
     """Bumping the animation frame must swap some ocean glyphs."""
-    mv = app.screen.map_view
+    mv = _geo(app).map_view
+    assert mv is not None
     mv._anim_frame = 0
     mv.refresh_view()
     snap0 = str(mv._last_text)
@@ -250,7 +265,8 @@ async def s_battle_shoot_spends_tu(app, pilot):
     tu0 = sel.tu
     # Aim at an enemy; crosshair starts at sel's position, move it up-right
     # a few tiles toward the aliens (which spawn around top-center).
-    mv = app.screen.map_view
+    mv = _bat(app).map_view
+    assert mv is not None
     mv.cursor_x = 20
     mv.cursor_y = 5
     await pilot.press("f")   # snap shot

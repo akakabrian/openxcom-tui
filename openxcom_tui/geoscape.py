@@ -15,7 +15,7 @@ The ``LAND`` table below is a hand-drawn crude world map. Characters:
 from __future__ import annotations
 
 import math
-from typing import Iterable, Tuple
+from typing import Tuple
 
 
 # 120 cols × 36 rows. Derived from eyeballing a Robinson projection and

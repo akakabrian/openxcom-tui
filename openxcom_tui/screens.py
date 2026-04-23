@@ -8,7 +8,7 @@ conflict documented in SKILL.md.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, cast
 
 from rich.style import Style
 from rich.text import Text
@@ -20,16 +20,23 @@ from textual.widgets import Static
 from . import content
 from .engine import Game
 
+if TYPE_CHECKING:
+    from .app import OpenXcomApp
+
 
 class _BaseModal(ModalScreen):
     """Shared framing for our modals."""
 
     BINDINGS = [
-        Binding("escape", "dismiss", "Close"),
-        Binding("q",      "dismiss", "Close"),
+        Binding("escape", "close_dialog", "Close"),
+        Binding("q",      "close_dialog", "Close"),
     ]
 
-    def action_dismiss(self, *args) -> None:
+    @property
+    def oxc_app(self) -> "OpenXcomApp":
+        return cast("OpenXcomApp", self.app)
+
+    def action_close_dialog(self) -> None:
         self.app.pop_screen()
 
 
@@ -79,7 +86,7 @@ class ResearchScreen(_BaseModal):
         Binding("minus",  "move(-1)", "Up"),
         Binding("j",      "move(1)",  "Down", show=False),
         Binding("k",      "move(-1)", "Up", show=False),
-        Binding("enter",  "toggle",   "Start/Cancel"),
+        Binding("enter",  "queue_item",   "Start/Cancel"),
         Binding("]",      "assign(1)",  "More sci"),
         Binding("[",      "assign(-1)", "Less sci"),
     ]
@@ -97,7 +104,7 @@ class ResearchScreen(_BaseModal):
         self._refresh_body()
 
     def _entries(self) -> list:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         return content.available_research(g.completed_research)
 
     def action_move(self, step: int) -> None:
@@ -107,8 +114,8 @@ class ResearchScreen(_BaseModal):
         self.cursor = (self.cursor + step) % len(entries)
         self._refresh_body()
 
-    def action_toggle(self) -> None:
-        g: Game = self.app.game
+    def action_queue_item(self) -> None:
+        g: Game = self.oxc_app.game
         entries = self._entries()
         if not entries:
             return
@@ -122,7 +129,7 @@ class ResearchScreen(_BaseModal):
         self._refresh_body()
 
     def action_assign(self, delta: int) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         entries = self._entries()
         if not entries:
             return
@@ -135,7 +142,7 @@ class ResearchScreen(_BaseModal):
         self._refresh_body()
 
     def _refresh_body(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         t = Text()
         t.append("— RESEARCH —  (Enter start/cancel, +/- select, [/] staff)\n\n",
                  style=Style(color="rgb(240,220,140)", bold=True))
@@ -175,7 +182,7 @@ class ManufactureScreen(_BaseModal):
         Binding("minus", "move(-1)", "Up"),
         Binding("j",     "move(1)",  "Down", show=False),
         Binding("k",     "move(-1)", "Up", show=False),
-        Binding("enter", "toggle",   "Start/Cancel"),
+        Binding("enter", "queue_item",   "Start/Cancel"),
         Binding("]",     "assign(1)",  "More eng"),
         Binding("[",     "assign(-1)", "Less eng"),
     ]
@@ -193,7 +200,7 @@ class ManufactureScreen(_BaseModal):
         self._refresh_body()
 
     def _entries(self) -> list:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         return content.manufacturable_items(g.completed_research)
 
     def action_move(self, step: int) -> None:
@@ -203,8 +210,8 @@ class ManufactureScreen(_BaseModal):
         self.cursor = (self.cursor + step) % len(entries)
         self._refresh_body()
 
-    def action_toggle(self) -> None:
-        g: Game = self.app.game
+    def action_queue_item(self) -> None:
+        g: Game = self.oxc_app.game
         entries = self._entries()
         if not entries:
             return
@@ -217,7 +224,7 @@ class ManufactureScreen(_BaseModal):
         self._refresh_body()
 
     def action_assign(self, delta: int) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         entries = self._entries()
         if not entries:
             return
@@ -230,7 +237,7 @@ class ManufactureScreen(_BaseModal):
         self._refresh_body()
 
     def _refresh_body(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         t = Text()
         t.append("— MANUFACTURE —  (Enter start/cancel ×5, +/- select, [/] staff)\n\n",
                  style=Style(color="rgb(240,220,140)", bold=True))
@@ -268,7 +275,7 @@ class BaseScreen(_BaseModal):
         self._refresh_body()
 
     def _refresh_body(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         t = Text()
         t.append("— BASE LAYOUT —\n\n",
                  style=Style(color="rgb(240,220,140)", bold=True))
@@ -332,7 +339,7 @@ class InterceptScreen(_BaseModal):
         self._refresh_body()
 
     def _entries(self) -> list:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         return [u for u in g.ufos.values() if u.detected and not u.shot_down]
 
     def action_move(self, step: int) -> None:
@@ -343,7 +350,7 @@ class InterceptScreen(_BaseModal):
         self._refresh_body()
 
     def action_intercept(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         entries = self._entries()
         if not entries:
             return
@@ -374,7 +381,7 @@ class InterceptScreen(_BaseModal):
 
     def action_land_at_crash(self) -> None:
         """Launch a battlescape mission at the first crashed UFO."""
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         crashed = [u for u in g.ufos.values() if u.shot_down]
         if not crashed:
             g.log_msg("[intercept] no crash sites")
@@ -383,10 +390,10 @@ class InterceptScreen(_BaseModal):
         # Remove the UFO from map (it's now a battle).
         del g.ufos[crashed[0].id]
         self.app.pop_screen()
-        self.app.switch_to_battle()
+        self.oxc_app.switch_to_battle()
 
     def _refresh_body(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         t = Text()
         t.append("— INTERCEPTION —  (Enter engage, L land at crash)\n\n",
                  style=Style(color="rgb(240,220,140)", bold=True))
@@ -429,7 +436,7 @@ class GraphsScreen(_BaseModal):
         self._refresh_body()
 
     def _refresh_body(self) -> None:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         t = Text()
         t.append("— HISTORY —\n\n", style=Style(color="rgb(240,220,140)", bold=True))
         t.append("Funding:\n", style="bold")
@@ -487,7 +494,7 @@ class UfopaediaScreen(_BaseModal):
         self._refresh_body()
 
     def _entries(self) -> list:
-        g: Game = self.app.game
+        g: Game = self.oxc_app.game
         out = []
         # Crafts you already own.
         for c in content.CRAFT_TYPES.values():
