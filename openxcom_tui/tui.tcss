@@ -1,0 +1,94 @@
+/* OpenXCOM TUI stylesheet. */
+
+Screen {
+    background: rgb(6, 8, 14);
+}
+
+Header {
+    background: rgb(12, 18, 30);
+    color: rgb(240, 220, 140);
+}
+
+Footer {
+    background: rgb(12, 18, 30);
+    color: rgb(180, 180, 200);
+}
+
+#main {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#left-col {
+    width: 1fr;
+    height: 1fr;
+}
+
+#right-col {
+    width: 34;
+    height: 1fr;
+    border-left: heavy rgb(60, 80, 100);
+}
+
+GeoscapeMapView, BattleMapView {
+    width: 1fr;
+    height: 1fr;
+    background: rgb(6, 8, 14);
+    color: rgb(200, 210, 230);
+}
+
+#log-panel {
+    height: 12;
+    border-top: heavy rgb(60, 80, 100);
+    background: rgb(8, 10, 16);
+}
+
+#status-panel, #action-panel {
+    padding: 0 1;
+    background: rgb(10, 14, 22);
+    color: rgb(210, 220, 240);
+    height: auto;
+}
+
+#status-panel {
+    border-bottom: heavy rgb(50, 60, 90);
+}
+
+#flash-bar {
+    height: 1;
+    background: rgb(18, 24, 40);
+    color: rgb(255, 230, 140);
+}
+
+ModalScreen {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.dialog {
+    background: rgb(14, 18, 28);
+    border: heavy rgb(100, 140, 180);
+    padding: 1 2;
+    width: 70;
+    height: auto;
+    max-height: 40;
+}
+
+.dialog-wide {
+    width: 110;
+    max-height: 44;
+}
+
+.dialog-title {
+    color: rgb(240, 220, 140);
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.dialog-row {
+    height: auto;
+    padding: 0 1;
+}
+
+.dialog-row-selected {
+    background: rgb(40, 55, 80);
+}

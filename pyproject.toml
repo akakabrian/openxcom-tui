@@ -1,0 +1,22 @@
+[project]
+name = "openxcom-tui"
+version = "0.1.0"
+description = "Terminal-native OpenXCOM (UFO: Enemy Unknown) front-end"
+requires-python = ">=3.10"
+dependencies = [
+    # Textual 9+ may change the Widget._render() contract we rely on;
+    # cap at major until re-verified (see simcity-tui's pyproject).
+    "textual>=0.80,<10",
+    "aiohttp>=3.9",
+    "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["openxcom_tui"]
+
+[tool.setuptools.package-data]
+openxcom_tui = ["tui.tcss"]

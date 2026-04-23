@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+**/objs/
+*.so
+*.dylib
+*.dll
+
+# Vendored engine tree — too big for repo, fetched via `make bootstrap`.
+/engine/openxcom/
+
+# QA screenshot output — regenerated each test run.
+tests/out/*.svg
+
+# Save files
+/saves/
+*.oxcsav
+
+.DS_Store
