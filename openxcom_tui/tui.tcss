@@ -25,7 +25,9 @@ Footer {
 }
 
 #right-col {
-    width: 34;
+    width: 1fr;
+    min-width: 24;
+    max-width: 32;
     height: 1fr;
     border-left: heavy rgb(60, 80, 100);
 }
