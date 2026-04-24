@@ -1,12 +1,12 @@
 # DOGFOOD — openxcom
 
-_Session: 2026-04-23T13:25:22, driver: pty, duration: 3.0 min_
+_Session: 2026-04-23T14:44:14, driver: pty, duration: 1.5 min_
 
-**PASS** — ran for 1.9m, captured 9 snap(s), 1 milestone(s), 0 blocker(s), 0 major(s).
+**PASS** — ran for 1.1m, captured 7 snap(s), 1 milestone(s), 0 blocker(s), 0 major(s).
 
 ## Summary
 
-Ran a rule-based exploratory session via `pty` driver. Found 2 UX note(s). Game reached 36 unique state snapshots. Captured 1 milestone shot(s); top candidates promoted to `screenshots/candidates/`. 1 coverage note(s) — see Coverage section.
+Ran a rule-based exploratory session via `pty` driver. Found 2 UX note(s). Game reached 35 unique state snapshots. Captured 1 milestone shot(s); top candidates promoted to `screenshots/candidates/`. 1 coverage note(s) — see Coverage section.
 
 ## Findings
 
@@ -28,21 +28,21 @@ _None._
 
 ### UX (feel-better-ifs)
 - **[U1] score never changes during normal play**
-  - All 20 score samples read '0'. Either scoring requires specific triggers or it's not wired to state().
+  - All 13 score samples read '0'. Either scoring requires specific triggers or it's not wired to state().
 - **[U2] Score never changed in state() during session**
   - Consider exposing score in /state or App attributes so agent-driven QA can verify progress.
 
 ## Coverage
 
 - Driver backend: `pty`
-- Keys pressed: 968 (unique: 45)
-- State samples: 47 (unique: 36)
-- Score samples: 20
+- Keys pressed: 613 (unique: 52)
+- State samples: 46 (unique: 35)
+- Score samples: 46
 - Milestones captured: 1
-- Phase durations (s): A=84.2, B=11.8, C=18.1
-- Snapshots: `/home/brian/AI/projects/tui-dogfood/reports/snaps/openxcom-20260423-132326`
+- Phase durations (s): A=44.0, B=14.7, C=9.1
+- Snapshots: `/home/brian/AI/projects/tui-dogfood/reports/snaps/openxcom-20260423-144304`
 
-Unique keys exercised: ., /, 3, 5, :, >, ?, F, H, R, ], a, b, c, d, down, e, enter, escape, f, f2, g, h, i, k, left, m, n, p, q, question_mark, r, right, s, shift+slash, shift+tab, space, t, tab, u ...
+Unique keys exercised: -, ., /, 2, 3, 5, :, ;, >, ?, F, H, R, ], a, b, c, ctrl+l, d, delete, down, e, enter, escape, f, f2, g, h, i, k, l, left, m, n, p, page_down, q, question_mark, r, right ...
 
 ### Coverage notes
 
@@ -53,4 +53,4 @@ Unique keys exercised: ., /, 3, 5, :, >, ?, F, H, R, ], a, b, c, d, down, e, ent
 
 | Event | t (s) | Interest | File | Note |
 |---|---|---|---|---|
-| first_input | 0.3 | 0.0 | `openxcom-20260423-132326/milestones/first_input.txt` | key=up |
+| first_input | 0.3 | 0.0 | `openxcom-20260423-144304/milestones/first_input.txt` | key=up |
